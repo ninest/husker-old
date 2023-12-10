@@ -1,0 +1,41 @@
+@layer utilities {
+  .prose,
+  .prose > article {
+    @apply space-y-base leading-8 text-gray-darker dark:text-gray-light;
+
+    p {
+      @apply break-words;
+    }
+
+    ul {
+      @apply list-outside list-disc ml-lg;
+    }
+    ol {
+      @apply list-outside list-decimal ml-lg;
+    }
+
+    h2,
+    h3,
+    h4 {
+      @apply font-display text-dark dark:text-gray-lighter;
+      // Extra spacing above and below headings
+      @apply pt-0.5 pb-0.5;
+    }
+
+    h2 {
+      @apply font-extrabold;
+    }
+    h3 {
+      @apply font-medium;
+    }
+    h4 {
+      @apply font-medium;
+    }
+
+    .expandable {
+      h3 {
+        @apply text-lg font-semibold;
+      }
+    }
+  }
+}

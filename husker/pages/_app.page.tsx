@@ -1,0 +1,138 @@
+import { Divider } from "@/components/Divider";
+import { Footer } from "@/components/ui/Footer";
+import { MobileNavbar } from "@/components/ui/MobileNavbar";
+import { Sidebar } from "@/components/ui/Sidebar";
+import { Spacer } from "@/components/util/Spacer";
+import { useSettings, useTheme } from "@/hooks/settings";
+import { withTRPC } from "@trpc/next";
+import clsx from "clsx";
+import { DefaultSeo } from "next-seo";
+import type { AppProps } from "next/app";
+import { useRouter } from "next/router";
+import Script from "next/script";
+import { useEffect, useState } from "react";
+import { Toaster } from "react-hot-toast";
+import type { AppRouter } from "../server/router";
+import "../styles/globals.scss";
+
+const GA_MEASUREMENT_ID = "G-DGEG3B5B16";
+
+function MyApp({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+  const { settings } = useSettings();
+  const { setTheme } = useTheme();
+
+  useEffect(() => {
+    const currentTheme = settings.theme;
+    setTheme(currentTheme);
+    document.body.dataset.theme = currentTheme;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (
+      process.env.NODE_ENV === "production" &&
+      typeof window !== "undefined" &&
+      "goatcounter" in window
+    ) {
+      // @ts-ignore
+      window.goatcounter.count({
+        path: router.asPath,
+      });
+    }
+  }, [router]);
+
+  const [showSidebar, setShowSidebar] = useState(false);
+
+  // On mobile, show the sidebar if there is a search query
+  const { q } = router.query as { q: string };
+  useEffect(() => {
+    if (q) setShowSidebar(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router]);
+
+  return (
+    <>
+    <Script src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}" />
+        <Script id="google-analytics">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+  
+            gtag('config', '${GA_MEASUREMENT_ID}');
+          `}
+        </Script>
+      <DefaultSeo
+        titleTemplate="%s - Husker Northeastern"
+        defaultTitle="Husker"
+        description="Information about Northeastern including dorms, housing, free stuff, and apps to download"
+      ></DefaultSeo>
+      {/* Top padding to the toast on mobile so it doesn't block the navbar */}
+      <Toaster position="top-right" containerClassName="mt-16 md:mt-0" />
+      {!showSidebar && (
+        <div className={clsx("block md:hidden sticky top-0 z-50")}>
+          <MobileNavbar onMenuClick={() => setShowSidebar(!showSidebar)}></MobileNavbar>
+        </div>
+      )}
+      <main className={clsx("md:flex")}>
+        {/* 
+              TODO
+              Wrapping this element in a div will fix the safari scroll bug
+              https://stackoverflow.com/q/51792783/8677167
+              But it causes an issue with the sidebar
+            */}
+        <div
+          className={clsx({ hidden: !showSidebar }, "md:block sticky z-50 top-0 bottom-0 left-0")}
+        >
+          <Sidebar onCloseClick={() => setShowSidebar(false)}></Sidebar>
+        </div>
+
+        {/*  https://stackoverflow.com/a/43312314/8677167 */}
+        {/*  min-w-0 required if children may scroll horizontally */}
+        <div className="min-w-0 w-full">
+          <div className="min-h-screen">
+            <Component {...pageProps} />
+          </div>
+          <Spacer size="md"></Spacer>
+          <Divider />
+
+          <Footer></Footer>
+        </div>
+      </main>
+    </>
+  );
+}
+
+const getBaseUrl = () => {
+  if (typeof window !== "undefined") {
+    return "";
+  }
+  if (process.browser) return ""; // Browser should use current path
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`; // SSR should use vercel url
+
+  return `http://localhost:${process.env.PORT ?? 3000}`; // dev SSR should use localhost
+};
+
+export default withTRPC<AppRouter>({
+  config({ ctx }) {
+    /**
+     * If you want to use SSR, you need to use the server's full URL
+     * @link https://trpc.io/docs/ssr
+     */
+    const url = `${getBaseUrl()}/api/trpc`;
+
+    return {
+      url,
+      // transformer: superjson,
+      /**
+       * @link https://react-query.tanstack.com/reference/QueryClient
+       */
+      // queryClientConfig: { defaultOptions: { queries: { staleTime: 60 } } },
+    };
+  },
+  /**
+   * @link https://trpc.io/docs/ssr
+   */
+  ssr: false,
+})(MyApp);
